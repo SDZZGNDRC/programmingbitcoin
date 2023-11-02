@@ -116,7 +116,14 @@ class Tx:
         # parse num_outputs number of TxOuts
         # locktime is an integer in 4 bytes, little-endian
         # return an instance of the class (see __init__ for args)
-        raise NotImplementedError
+        b = s.read(4)
+        version = int.from_bytes(b, byteorder='little')
+        num_inputs = read_varint(s)
+        tx_ins = [TxIn.parse(s) for _ in range(num_inputs)]
+        num_outputs = read_varint(s)
+        tx_outs = [TxOut.parse(s) for _ in range(num_outputs)]
+        locktime = int.from_bytes(s.read(4), byteorder='little')
+        return cls(version, tx_ins, tx_outs, locktime, testnet=testnet)
 
     # tag::source6[]
     def serialize(self):
@@ -136,9 +143,11 @@ class Tx:
         '''Returns the fee of this transaction in satoshi'''
         # initialize input sum and output sum
         # use TxIn.value() to sum up the input amounts
+        in_sum = sum([tx_in.value() for tx_in in self.tx_ins])
         # use TxOut.amount to sum up the output amounts
+        out_sum = sum([tx_out.amount for tx_out in self.tx_outs])
         # fee is input sum - output sum
-        raise NotImplementedError
+        return in_sum - out_sum
 
 
 # tag::source2[]
@@ -169,7 +178,12 @@ class TxIn:
         # use Script.parse to get the ScriptSig
         # sequence is an integer in 4 bytes, little-endian
         # return an instance of the class (see __init__ for args)
-        raise NotImplementedError
+        # prev_tx = int.from_bytes(s.read(32), byteorder='little')
+        prev_tx = s.read(32)[::-1]
+        prev_index = int.from_bytes(s.read(4), byteorder='little')
+        script_sig = Script.parse(s)
+        sequence = int.from_bytes(s.read(4), byteorder='little')
+        return cls(prev_tx, prev_index, script_sig, sequence)
 
     # tag::source5[]
     def serialize(self):
@@ -218,9 +232,11 @@ class TxOut:
         return a TxOut object
         '''
         # amount is an integer in 8 bytes, little endian
+        amount = int.from_bytes(s.read(8), byteorder='little')
         # use Script.parse to get the ScriptPubKey
+        script__pubkey = Script.parse(s)
         # return an instance of the class (see __init__ for args)
-        raise NotImplementedError
+        return cls(amount, script__pubkey)
 
     # tag::source4[]
     def serialize(self):  # <1>
