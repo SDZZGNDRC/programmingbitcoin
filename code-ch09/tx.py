@@ -1,5 +1,6 @@
 from io import BytesIO
 from unittest import TestCase
+from typing import List
 
 import json
 import requests
@@ -73,7 +74,7 @@ class Tx:
 
     def __init__(self, version, tx_ins, tx_outs, locktime, testnet=False):
         self.version = version
-        self.tx_ins = tx_ins
+        self.tx_ins: List[TxIn] = tx_ins
         self.tx_outs = tx_outs
         self.locktime = locktime
         self.testnet = testnet
@@ -258,19 +259,29 @@ class Tx:
     def is_coinbase(self):
         '''Returns whether this transaction is a coinbase transaction or not'''
         # check that there is exactly 1 input
+        if len(self.tx_ins) != 1:
+            return False
         # grab the first input
+        tx_in = self.tx_ins[0]
         # check that first input prev_tx is b'\x00' * 32 bytes
+        if tx_in.prev_tx != b'\x00'*32:
+            return False
         # check that first input prev_index is 0xffffffff
-        raise NotImplementedError
+        if tx_in.prev_index != 0xffffffff:
+            return False
+        return True
 
     def coinbase_height(self):
         '''Returns the height of the block this coinbase transaction is in
         Returns None if this transaction is not a coinbase transaction
         '''
         # if this is NOT a coinbase transaction, return None
+        if not self.is_coinbase():
+            return None
         # grab the first cmd
+        first_cmd = self.tx_ins[0].script_sig.cmds[0]
         # convert the cmd from little endian to int
-        raise NotImplementedError
+        return little_endian_to_int(first_cmd)
 
 
 class TxIn:
